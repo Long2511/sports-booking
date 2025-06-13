@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 44 70% 93%;
+  --foreground: 0 0% 10%;
+
+  --card: 44 70% 93%;
+  --card-foreground: 0 0% 10%;
+
+  --popover: 44 70% 93%;
+  --popover-foreground: 0 0% 10%;
+
+  --primary: 0 59% 30%;
+  --primary-foreground: 44 70% 93%;
+
+  --secondary: 36 50% 80%;
+  --secondary-foreground: 0 0% 10%;
+
+  --muted: 36 50% 80%;
+  --muted-foreground: 0 0% 45%;
+
+  --accent: 36 50% 80%;
+  --accent-foreground: 0 0% 10%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 44 70% 93%;
+
+  --border: 36 30% 70%;
+  --input: 36 30% 70%;
+  --ring: 0 59% 30%;
+
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 20 14% 4%;
+  --foreground: 44 70% 93%;
+
+  --card: 20 14% 4%;
+  --card-foreground: 44 70% 93%;
+
+  --popover: 20 14% 4%;
+  --popover-foreground: 44 70% 93%;
+
+  --primary: 0 59% 30%;
+  --primary-foreground: 44 70% 93%;
+
+  --secondary: 36 50% 20%;
+  --secondary-foreground: 44 70% 93%;
+
+  --muted: 36 50% 20%;
+  --muted-foreground: 36 30% 70%;
+
+  --accent: 36 50% 20%;
+  --accent-foreground: 44 70% 93%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 44 70% 93%;
+
+  --border: 36 30% 30%;
+  --input: 36 30% 30%;
+  --ring: 0 59% 30%;
+}
+
+/* Custom Calendar Styling */
+.sports-calendar {
+  font-family: inherit;
+}
+
+.sports-calendar .grid {
+  border-collapse: collapse;
+}
+
+.sports-calendar .border-r:last-child {
+  border-right: none;
+}
+
+.sports-calendar .border-b:last-child {
+  border-bottom: none;
+}
+
+/* Hover effects for calendar cells */
+.sports-calendar [role="gridcell"]:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Event styling */
+.sports-calendar .event-confirmed {
+  background-color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.sports-calendar .event-pending {
+  background-color: #f59e0b;
+  border-color: #d97706;
+}
+
+.sports-calendar .event-rejected {
+  background-color: hsl(var(--destructive));
+  border-color: hsl(var(--destructive));
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .sports-calendar .text-sm {
+    font-size: 0.75rem;
+  }
+
+  .sports-calendar .p-2 {
+    padding: 0.25rem;
+  }
+}
+
+/* Additional responsive styles for the calendar */
+.sports-calendar {
+  overflow-x: auto; /* Enable horizontal scrolling on small screens */
+}
+
+/* Ensure minimum width for day columns */ \
+.sports-calendar .grid-cols-\[80px_repeat$$7\,1fr$$\] > *:not(:first-child) {
+  min-width: 100px;
+}
+
+/* Improve header display */
+.sports-calendar .border-r {
+  word-break: break-word;
+}
+
+/* Ensure time column is always visible */
+.sports-calendar .grid > *:first-child {
+  position: sticky;
+  left: 0;
+  background-color: white;
+  z-index: 10;
+}
+
+/* Improve event display */
+.sports-calendar .absolute {
+  z-index: 5;
+}
