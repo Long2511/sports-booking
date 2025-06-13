@@ -3,8 +3,9 @@
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { fetcher } from "../../lib/api"
 
-export default function LoginPage() {
+export default async function LoginPage() {
   const router = useRouter()
 
   const handleGoogleLogin = () => {
@@ -12,6 +13,9 @@ export default function LoginPage() {
     // For demo purposes, we'll just redirect to the user dashboard
     router.push("/dashboard")
   }
+
+  // Example: fetch login data
+  // const data = await fetcher('/login');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-secondary">
