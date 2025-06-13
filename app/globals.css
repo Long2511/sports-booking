@@ -118,7 +118,7 @@
   overflow-x: auto; /* Enable horizontal scrolling on small screens */
 }
 
-/* Ensure minimum width for day columns */ \
+/* Ensure minimum width for day columns */
 .sports-calendar .grid-cols-\[80px_repeat$$7\,1fr$$\] > *:not(:first-child) {
   min-width: 100px;
 }
@@ -139,4 +139,14 @@
 /* Improve event display */
 .sports-calendar .absolute {
   z-index: 5;
+}
+
+/* Booking type toggle button styles */
+@layer components {
+  .btn-selected {
+    @apply bg-primary text-white hover:bg-primary/90;
+  }
+  .btn-unselected {
+    @apply bg-white text-primary border border-primary hover:bg-white/90;
+  }
 }
