@@ -1,14 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { CustomCalendar } from "@/components/custom-calendar"
 import { TimeSlotSelector } from "@/components/time-slot-selector"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
+import { fetcher } from "../../lib/api"
 
 export default function SportHallBooking() {
+  const [sports, setSports] = useState<{ id: string; name: string }[]>([])
+  useEffect(() => {
+    async function loadSports() {
+      try {
+        const data = await fetcher<{ id: string; name: string }[]>("/sports/get-sports")
+        setSports(data)
+      } catch (error) {
+        console.error("Failed to load sports:", error)
+      }
+    }
+    loadSports()
+  }, [])
+
   const router = useRouter()
   const [bookingType, setBookingType] = useState<"indoor" | "outdoor">("outdoor")
   const [selectedSport, setSelectedSport] = useState("")
@@ -117,14 +131,14 @@ Time: ${event.start?.toLocaleString()} - ${event.end?.toLocaleString()}
             <div className="flex rounded-md overflow-hidden">
               <Button
                 variant={bookingType === "indoor" ? "default" : "outline"}
-                className={`rounded-none ${bookingType === "indoor" ? "bg-white text-primary" : "bg-primary text-white"}`}
+                className={`rounded-none ${bookingType === "indoor" ? "btn-selected" : "btn-unselected"}`}
                 onClick={() => setBookingType("indoor")}
               >
                 Indoor
               </Button>
               <Button
                 variant={bookingType === "outdoor" ? "default" : "outline"}
-                className={`rounded-none ${bookingType === "outdoor" ? "bg-primary text-white" : "bg-white text-primary"}`}
+                className={`rounded-none ${bookingType === "outdoor" ? "btn-selected" : "btn-unselected"}`}
                 onClick={() => setBookingType("outdoor")}
               >
                 Outdoor
@@ -140,10 +154,17 @@ Time: ${event.start?.toLocaleString()} - ${event.end?.toLocaleString()}
                   <SelectValue placeholder="Sports courts" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="badminton">Badminton</SelectItem>
-                  <SelectItem value="tennis">Tennis</SelectItem>
-                  <SelectItem value="basketball">Basketball</SelectItem>
-                  <SelectItem value="volleyball">Volleyball</SelectItem>
+                  {sports.length > 0 ? (
+                    sports.map((sport) => (
+                      <SelectItem key={sport.id} value={sport.id}>
+                        {sport.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="loading" disabled>
+                      Loading sports...
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
