@@ -8,14 +8,30 @@ import { TimeSlotSelector } from "@/components/time-slot-selector"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import { fetcher } from "../../lib/api"
+import { Input } from "@/components/ui/input"
 
 export default function SportHallBooking() {
   const [sports, setSports] = useState<{ id: string; name: string }[]>([])
+  const router = useRouter()
+  const [bookingType, setBookingType] = useState<"indoor" | "outdoor">("outdoor")
+  const [selectedSportId, setSelectedSportId] = useState("")
+  const [selectedLocation, setSelectedLocation] = useState("")
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ id: string; start: string; end: string } | null>(null)
+  const [halls, setHalls] = useState<{ id: string; name: string; sportId: string; location: string }[]>([])
+  const [filteredHalls, setFilteredHalls] = useState<typeof halls>([])
+  const [purpose, setPurpose] = useState('')
+  // Example: get userId from session
+  // const { data: session } = useSession()
+  // const userId = session?.user?.id ?? ''
+  const userId = "22ca47a8-b8f6-4541-a880-16c895b0b091" // Test ID, remove before production
+
   useEffect(() => {
     async function loadSports() {
       try {
-        const data = await fetcher<{ id: string; name: string }[]>("/sports/get-sports")
-        setSports(data)
+        const data = await fetcher<{ id: string; name: string, description: string }[]>("/sports/get-sports")
+        const mapped = data.map(s => ({ id: s.id, name: s.name, description: s.description }))
+        setSports(mapped)
       } catch (error) {
         console.error("Failed to load sports:", error)
       }
@@ -23,12 +39,62 @@ export default function SportHallBooking() {
     loadSports()
   }, [])
 
-  const router = useRouter()
-  const [bookingType, setBookingType] = useState<"indoor" | "outdoor">("outdoor")
-  const [selectedSport, setSelectedSport] = useState("")
-  const [selectedLocation, setSelectedLocation] = useState("")
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ start: string; end: string } | null>(null)
+
+  async function loadHalls() {
+    try {
+      const data = await fetcher<any[]>("/sport-halls/get-sport-halls")
+      const mapped = data.map(h => ({
+        id: h.id,
+        name: h.name,
+        sportId: h.sport_id ?? h.sportId,
+        location: h.location,
+      }))
+      console.log("Loaded sport halls:", mapped)
+      setHalls(mapped)
+    } catch (error) {
+      console.error("Failed to load sport halls:", error)
+    }
+  }
+
+  useEffect(() => {
+    loadHalls()
+  }, [])
+
+  // Time slots fetched from API
+  const [timeSlots, setTimeSlots] = useState<{ id: string; start: string; end: string }[]>([])
+  useEffect(() => {
+    async function loadTimeSlots() {
+      try {
+        const data = await fetcher<any[]>("/time-slots/get-time-slots")
+        setTimeSlots(
+          data.map(ts => ({ id: ts.id, start: ts.start_time, end: ts.end_time }))
+        )
+      } catch (error) {
+        console.error("Failed to load time slots:", error)
+      }
+    }
+    loadTimeSlots()
+  }, [])
+
+
+  // Filter halls based on selected sport and reset location when sport changes
+  // Filter halls by selected sport AND booking type
+  useEffect(() => {
+    if (selectedSportId) {
+      setFilteredHalls(
+        halls.filter(
+          h => h.sportId === selectedSportId && h.location === bookingType
+        )
+      )
+    } else {
+      setFilteredHalls([])
+    }
+  }, [selectedSportId, halls, bookingType])
+
+  // Reset location selection when selected sport changes
+  useEffect(() => {
+    setSelectedLocation("")
+  }, [selectedSportId])
 
   // Mock data for calendar events
   const calendarEvents = [
@@ -72,13 +138,12 @@ export default function SportHallBooking() {
 
   const handleEventClick = (event: any) => {
     const props = event.extendedProps
-
-    alert(`
-Event: ${event.title}
-Court: ${props?.court || "N/A"}
-User: ${props?.user || "N/A"}
-Status: ${props?.status || "N/A"}
-Time: ${event.start?.toLocaleString()} - ${event.end?.toLocaleString()}
+      alert(`
+        Event: ${event.title}
+        Court: ${props?.court || "N/A"}
+        User: ${props?.user || "N/A"}
+        Status: ${props?.status || "N/A"}
+        Time: ${event.start?.toLocaleString()} - ${event.end?.toLocaleString()}
     `)
   }
 
@@ -90,15 +155,40 @@ Time: ${event.start?.toLocaleString()} - ${event.end?.toLocaleString()}
     })
   }
 
-  const handleConfirm = () => {
-    router.push("/booking-success")
+  const handleConfirm = async () => {
+    debugger  
+    if (!userId) {
+      console.error('User not authenticated')
+      return
+    }
+    if (!selectedSportId || !selectedLocation || !selectedDate || !selectedTimeSlot?.id) return
+    const bookingPayload = {
+      userId,
+      sportId: selectedSportId,
+      sportHallId: selectedLocation,
+      date: selectedDate.toISOString().split('T')[0],
+      timeSlotId: selectedTimeSlot.id,
+      purpose,
+    }
+    console.log('Booking payload:', bookingPayload)
+    try {
+      await fetcher('/bookings/create-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookingPayload),
+      })
+      router.push('/booking-success')
+    } catch (error) {
+      console.error('Booking failed:', error)
+      alert('Failed to create booking. Please try again later.')}
   }
 
   const handleReset = () => {
-    setSelectedSport("")
+    setSelectedSportId("")
     setSelectedLocation("")
     setSelectedDate(null)
     setSelectedTimeSlot(null)
+    setPurpose("")
   }
 
   return (
@@ -149,15 +239,16 @@ Time: ${event.start?.toLocaleString()} - ${event.end?.toLocaleString()}
           <div className="space-y-6">
             <div>
               <label className="block text-primary mb-2">Select the sport</label>
-              <Select value={selectedSport} onValueChange={setSelectedSport}>
+              <Select value={selectedSportId} onValueChange={setSelectedSportId}>
                 <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Sports courts" />
+                  <SelectValue placeholder="Sports" />
                 </SelectTrigger>
                 <SelectContent>
                   {sports.length > 0 ? (
                     sports.map((sport) => (
+                      console.log(sport),
                       <SelectItem key={sport.id} value={sport.id}>
-                        {sport.name}
+                        {sport.description}
                       </SelectItem>
                     ))
                   ) : (
@@ -171,18 +262,40 @@ Time: ${event.start?.toLocaleString()} - ${event.end?.toLocaleString()}
 
             <div>
               <label className="block text-primary mb-2">Select location</label>
-              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+              <Select value={selectedLocation} onValueChange={setSelectedLocation} onOpenChange ={() => loadHalls()}>
                 <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Sports courts" />
+                  <SelectValue placeholder="Select a hall" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="main-campus">Main Campus</SelectItem>
-                  <SelectItem value="east-campus">East Campus</SelectItem>
-                  <SelectItem value="west-campus">West Campus</SelectItem>
-                  <SelectItem value="sports-complex">Sports Complex</SelectItem>
+                  {!selectedSportId ? (
+                    <SelectItem value="no-sport" disabled>  
+                      Select a sport first
+                    </SelectItem>
+                  ) : halls.length === 0 ? (
+                    <SelectItem value="loading-hall" disabled>
+                      Loading sport halls...
+                    </SelectItem>
+                  ) : filteredHalls.length > 0 ? (
+                    filteredHalls.map((hall) => (
+                      <SelectItem key={hall.id} value={hall.id}>
+                        {hall.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-halls" disabled>
+                      No halls available for this sport
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Error if no halls available for selected sport & bookingType */}
+            {selectedSportId && filteredHalls.length === 0 && (
+              <p className="text-destructive text-sm mt-1">
+                No {bookingType} halls available for this sport.
+              </p>
+            )}
 
             <div>
               <label className="block text-primary mb-2">Select the time frame</label>
@@ -197,8 +310,33 @@ Time: ${event.start?.toLocaleString()} - ${event.end?.toLocaleString()}
                 </p>
               )}
               <div className="mt-4">
-                <TimeSlotSelector onTimeSlotSelect={(timeSlot) => setSelectedTimeSlot(timeSlot)} />
+                <TimeSlotSelector
+                  onTimeSlotSelect={(timeSlot) => {
+                    // Find the slot ID by matching start/end
+                    const match = timeSlots.find(
+                      ts => ts.start === timeSlot.start && ts.end === timeSlot.end
+                    )
+                    setSelectedTimeSlot({
+                      id: match?.id ?? '',
+                      start: timeSlot.start,
+                      end: timeSlot.end,
+                    })
+                  }}
+                />
               </div>
+            </div>
+            <div>
+              <label className="block text-primary mb-2">Note</label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Add any additional information or requests for your booking
+              </p>
+            </div>
+            <div>
+              <Input
+                value={purpose}
+                placeholder="Your purpose"
+                onChange={(e) => setPurpose(e.target.value)}
+              />
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
@@ -209,7 +347,7 @@ Time: ${event.start?.toLocaleString()} - ${event.end?.toLocaleString()}
                 variant="default"
                 className="bg-primary text-white"
                 onClick={handleConfirm}
-                disabled={!selectedSport || !selectedLocation || !selectedTimeSlot}
+                disabled={!selectedSportId || !selectedLocation || !selectedTimeSlot}
               >
                 Confirm
               </Button>
